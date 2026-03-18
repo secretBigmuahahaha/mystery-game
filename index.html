@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mystery Game</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #f0f8ff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #game-container { position: relative; width: 100vw; height: 100vh; background: linear-gradient(#a1c4fd, #c2e9fb); }
+        
+        /* Subtle Flower Background */
+        .flower { position: absolute; opacity: 0.15; pointer-events: none; width: 50px; }
+        
+        canvas { display: block; }
+
+        /* UI Overlays */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; color: #2c3e50;
+        }
+
+        #main-menu, #hint-screen {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        button {
+            padding: 10px 25px; font-size: 1.2rem; cursor: pointer;
+            background: #4facfe; border: none; color: white; border-radius: 5px;
+            margin-top: 20px; transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); }
+
+        #game-hud {
+            position: absolute; top: 20px; width: 100%; text-align: center;
+            font-size: 1.5rem; font-weight: bold; pointer-events: none;
+        }
+
+        .hidden { display: none !important; }
+        #riddle-text { font-style: italic; color: #e67e22; max-width: 400px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <svg class="flower" style="top: 10%; left: 10%;" viewBox="0 0 100 100"><path fill="#ff9999" d="M50 0 Q60 25 90 20 Q75 50 100 50 Q75 50 90 80 Q60 75 50 100 Q40 75 10 80 Q25 50 0 50 Q25 50 10 20 Q40 25 50 0"/></svg>
+    <svg class="flower" style="top: 70%; left: 85%;" viewBox="0 0 100 100"><path fill="#99ff99" d="M50 0 Q60 25 90 20 Q75 50 100 50 Q75 50 90 80 Q60 75 50 100 Q40 75 10 80 Q25 50 0 50 Q25 50 10 20 Q40 25 50 0"/></svg>
+
+    <div id="game-hud" class="hidden">
+        Score: <span id="score-val">0</span><br>
+        <small>Reach 15 points for your first hint on my identity</small>
+    </div>
+
+    <div id="ui-layer">
+        <div id="main-menu">
+            <h1>Jack, I heard you like games</h1>
+            <button onclick="startGame()">Start Game</button>
+        </div>
+
+        <div id="hint-screen" class="hidden">
+            <h2>Congrats!</h2>
+            <p>Here is your first hint:</p>
+            <p id="riddle-text">"The more of it there is, the less you can carry. But if you take it all away, the weight becomes too much to hold. What is it?"</p>
+            <button onclick="location.reload()">Play Again</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score-val');
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Load Bird Image
+    const birdImg = new Image();
+    birdImg.src = 'Little-removebg-preview.png'; 
+
+    let bird = { x: 50, y: canvas.height/2, w: 60, h: 60, gravity: 0.6, lift: -10, velocity: 0 };
+    let pipes = [];
+    let score = 0;
+    let gameRunning = false;
+    let pipeWidth = 80;
+    let pipeGap = 200;
+    let frameCount = 0;
+
+    function startGame() {
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('game-hud').classList.remove('hidden');
+        gameRunning = true;
+        animate();
+    }
+
+    function createPipe() {
+        let minPipeHeight = 50;
+        let spacing = canvas.height - pipeGap - (minPipeHeight * 2);
+        let topH = Math.floor(Math.random() * spacing) + minPipeHeight;
+        pipes.push({ x: canvas.width, top: topH, bottom: canvas.height - topH - pipeGap, passed: false });
+    }
+
+    function drawBird() {
+        ctx.drawImage(birdImg, bird.x, bird.y, bird.w, bird.h);
+    }
+
+    function drawPipes() {
+        ctx.fillStyle = '#2ecc71';
+        pipes.forEach(p => {
+            ctx.fillRect(p.x, 0, pipeWidth, p.top);
+            ctx.fillRect(p.x, canvas.height - p.bottom, pipeWidth, p.bottom);
+        });
+    }
+
+    function update() {
+        bird.velocity += bird.gravity;
+        bird.y += bird.velocity;
+
+        if (bird.y + bird.h > canvas.height || bird.y < 0) endGame();
+
+        if (frameCount % 90 === 0) createPipe();
+
+        pipes.forEach((p, index) => {
+            p.x -= 5;
+            
+            // Collision
+            if (bird.x + bird.w > p.x && bird.x < p.x + pipeWidth) {
+                if (bird.y < p.top || bird.y + bird.h > canvas.height - p.bottom) {
+                    endGame();
+                }
+            }
+
+            if (!p.passed && p.x + pipeWidth < bird.x) {
+                p.passed = true;
+                score++;
+                scoreEl.innerText = score;
+                if (score === 15) winGame();
+            }
+
+            if (p.x + pipeWidth < 0) pipes.splice(index, 1);
+        });
+    }
+
+    function endGame() {
+        gameRunning = false;
+        alert("Game Over! Try again to reach 15 points.");
+        location.reload();
+    }
+
+    function winGame() {
+        gameRunning = false;
+        document.getElementById('game-hud').classList.add('hidden');
+        document.getElementById('hint-screen').classList.remove('hidden');
+    }
+
+    function animate() {
+        if (!gameRunning) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawPipes();
+        drawBird();
+        update();
+        frameCount++;
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') bird.velocity = bird.lift;
+    });
+
+    window.addEventListener('touchstart', () => {
+        bird.velocity = bird.lift;
+    });
+</script>
+</body>
+</html>
