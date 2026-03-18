@@ -7,36 +7,27 @@
     <style>
         body { margin: 0; overflow: hidden; background: #f0f8ff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #game-container { position: relative; width: 100vw; height: 100vh; background: linear-gradient(#a1c4fd, #c2e9fb); }
-        
-        /* Subtle Flower Background */
         .flower { position: absolute; opacity: 0.15; pointer-events: none; width: 50px; }
-        
         canvas { display: block; }
-
-        /* UI Overlays */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             text-align: center; color: #2c3e50;
         }
-
         #main-menu, #hint-screen {
             background: rgba(255, 255, 255, 0.9);
             padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-
         button {
             padding: 10px 25px; font-size: 1.2rem; cursor: pointer;
             background: #4facfe; border: none; color: white; border-radius: 5px;
             margin-top: 20px; transition: transform 0.2s;
         }
         button:hover { transform: scale(1.05); }
-
         #game-hud {
             position: absolute; top: 20px; width: 100%; text-align: center;
             font-size: 1.5rem; font-weight: bold; pointer-events: none;
         }
-
         .hidden { display: none !important; }
         #riddle-text { font-style: italic; color: #e67e22; max-width: 400px; line-height: 1.5; }
     </style>
@@ -49,7 +40,7 @@
 
     <div id="game-hud" class="hidden">
         Score: <span id="score-val">0</span><br>
-        <small>Reach 15 points for your first hint on my identity</small>
+        <small>Reach 3 points for your first hint</small>
     </div>
 
     <div id="ui-layer">
@@ -77,16 +68,15 @@
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // Load Bird Image
     const birdImg = new Image();
     birdImg.src = 'Little-removebg-preview.png'; 
 
-    let bird = { x: 50, y: canvas.height/2, w: 60, h: 60, gravity: 0.6, lift: -10, velocity: 0 };
+    let bird = { x: 50, y: canvas.height/2, w: 60, h: 60, gravity: 0.5, lift: -8, velocity: 0 };
     let pipes = [];
     let score = 0;
     let gameRunning = false;
     let pipeWidth = 80;
-    let pipeGap = 200;
+    let pipeGap = 250; // Made this larger for easier passage
     let frameCount = 0;
 
     function startGame() {
@@ -121,12 +111,11 @@
 
         if (bird.y + bird.h > canvas.height || bird.y < 0) endGame();
 
-        if (frameCount % 90 === 0) createPipe();
+        if (frameCount % 100 === 0) createPipe(); // Pipes spawn slightly slower
 
         pipes.forEach((p, index) => {
-            p.x -= 5;
+            p.x -= 4; // Slowed down pipe speed from 5 to 4
             
-            // Collision
             if (bird.x + bird.w > p.x && bird.x < p.x + pipeWidth) {
                 if (bird.y < p.top || bird.y + bird.h > canvas.height - p.bottom) {
                     endGame();
@@ -137,7 +126,7 @@
                 p.passed = true;
                 score++;
                 scoreEl.innerText = score;
-                if (score === 15) winGame();
+                if (score === 3) winGame(); // Trigger at 3 points
             }
 
             if (p.x + pipeWidth < 0) pipes.splice(index, 1);
@@ -146,7 +135,7 @@
 
     function endGame() {
         gameRunning = false;
-        alert("Game Over! Try again to reach 15 points.");
+        alert("Game Over! Try again to reach 3 points.");
         location.reload();
     }
 
@@ -170,7 +159,8 @@
         if (e.code === 'Space') bird.velocity = bird.lift;
     });
 
-    window.addEventListener('touchstart', () => {
+    window.addEventListener('touchstart', (e) => {
+        e.preventDefault();
         bird.velocity = bird.lift;
     });
 </script>
